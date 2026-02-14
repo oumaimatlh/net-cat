@@ -85,10 +85,45 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
     C/C  Un canal  est en realite une entree ds la table de l'os qui relie Port -> Service -> Socket
 
 ##### Socket 
+    UN SOCKET est un point d communication entre programme et réseau 
     (IP, PORT) C'est une structure interne qui relie IP => PORT  => Programme (service )
     L’OS crée une structure interne (socket) (PORT, IP, SERVICE) mettre ce socket en état "Écoute" ,point de connexion réel
     - IL sert juste a accepter la connexion
     - Chaque socket utilise une  Mémoire (structure Socket) + descripteur systeme (chaque socket = fichier interne au  kernel  )
+
+###### Comment ?? la creation de ce socket ? 
+    * Programme est un fichier sur disque 
+    * Execution
+    * Kernel => Creer un processus + allour de la mémoire + initialise une tablde de file descriptors
+    * Programme demande une socket TCP
+    * kernel :RQ:
+            -Socket()
+            -Creation de la structure plus haut niveau Couche BSD=>struct socket *sock;
+                ROLE: c'est un adaptateur Programme  <->  struct socket  <->  TCP (struct sock / tcp_sock)
+                composants :
+                    famille d'adresse (IPV4 ou IPV6 ou ) + Type d socket (SOCK_STREM(TCP) ou SOCK_DGRAM(UDP) + SOCET_RAW(paquet brut)) + STATE de socket(CLOSED...)+ sk = null
+            
+            -Creation de struct sock => c'es t ka structure réseau générique 
+                Composants: files d'attente paquets + buffers(envoie et réception) + pointeur vers protocoles 
+
+
+            -Creation de struct tcp_sock: l'objet qui fait fonctionner le protocole TCP 
+            
+            -liason entre struct socket <=> struct sock  => double le lien 
+                le programme part du FD => Socket => TCP 
+                le reseau recoit un paquet => TCP=> socket=>programme
+
+            -Kernel fait le lien entre processus=> objet socket creation d'un file descriptor => creation d'un struct file => socket file 
+
+            -Bind() => Associe ce socket au port 8080 + IP (recoit une identite locale ) => il enregistre cette identite ds struct sock
+
+            -Listen() => ds struct tcp_sock change l etat au TCP listen, ds ce point la pile réseau commence a traiter les SYN entrantes 
+
+
+
+
+    *  La creation d'un nv socket pour chaque client car TCP est connexion orientée 
+        Lorsque le client envoie un SYN le kernel verifie le socket listen => creer automaitquement un nv struct sock + tcp_sock + socket + fd pour cette connexion specifique => le kernel fait accept() le kernel sort ce socket de client de la accpet queue  
 
 ## Modele client | serveur : 
 - Un serveur est une machine ou programme qui fourni des services ou ressources au clients 
@@ -103,8 +138,6 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
 
     * Pourquoi .??? :
         Le serveur ne sait pas a l'avance qui veut se connecter ; donc il reste a l'ecoute sur un port cepandant le client sait qu'il veut acceder a un service sur une machine 
-### Une COnnexion est ouverte ? 
-
 
 ### Relation 1 <-> 1 (SERVEUR <=> CLIENT)
 - Le Serveur communiquer avec un seul client a la fois une fois connecte , le serveur est occupe avec ce client il ne peut pas accepter d'autre connexions
@@ -133,21 +166,32 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
         -IL doit pre-alloue une connexion en memoire chaque client a son socket interne  +> des que le serveur demarrer il aurait tous ces sockets deja ouverts et prete de recevoir => c'est impossible 
 
 ## TCP (Transmission Control Protocol):
-    -TCP est un protocole de transfert entre 2 processus 
+    -TCP est un protocole de transfert entre 2 processus, est un protocole oriente connexion.
         RQ: 
             Un processus est une instance active d’un programme, créée et gérée par le système d’exploitation, avec sa propre mémoire et ses ressources.
+    -segmenter des données en paquets
+    - numerotation des segments pour garder l'ordre
+    - retransmission en cas de perte 
 
-    -Un TCP transporte un flux d'octets continu:
-        il utilise MSS (Maximum Segment Size)
-        il segmente le message sous forme des paquets (numero depart + nombre d'octets)
-        chaque segment devient un paquets TCP que l'OS va envoyer ur le réseau 
-
+    write(clientfd(file descriptor), "hello world", 11)
+        -copie ces octets ds buffer de sortie
+        -segmentation 
+        -L'entete TCP 
+            chaque segment devient => [En-tête TCP | Données]
+            contient :
+                Source port + destination port + numero d séquence + NUmero d'ACK + Flags ...
+        -Passage a IP layer
+            Ip encapsule le segement ds un paquet IP
+            .
+            .
+            .
+            ...
    ### Comment La creation d'une Connexion  TCP?...
 #### 3-WAY HANDSHAKE  SYN(CLIENT) => SYN + ACK(SERVEUR) => ACK(CLIENT) 
     1- Service démarre
-        Os creer une structure interne (Socket) ce socket est lié => IP + PORT + TCP  => Mode LISTEN  au ce moment aucun client n'est connu, aucun connexion n'existe, le serveur ecoute 
 
-    2- Le client veut envoyer au serveur 
+    2- Le client veut envoyer au serveur
+         - kernel creer un struct socket client + struct sock + struct tcp_sock + FD associe au socket + TCP closed  + Client appelle connect(fd, &addr_serveur, sizeof(addr_serveur)); + si le client ne fait pas bind afin de lier un port a ce socket  il choisi un port libre  => Initialisation d'un TCP (closed => SYN_SENT) => envoie d'un paquet SYN => KERNEL client attend SYN+ACK
         ex: navigateur
 
         le navigateur  dit a L'OS  je veux envoyer des donnees  a Ip sur le port 80 en TCP
@@ -179,3 +223,8 @@ C/C:
             Port distant,
             État = ESTABLISHED
             }
+
+    RQ :
+        le socket LISTEN ne peut jamais read ou write  => IL SERT D 'ACCEPTER JUSTE LES NV CONNEXIONS => ETAT LISTEN
+
+        NV SOCKET CLIENT => ETAT TCP : ESTABLISHED => READ AND WRITE 

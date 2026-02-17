@@ -133,7 +133,7 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
     Initier une connexion avec un serveur, envoyer une requete, recevoir et utiliser la reponse du serveur 
 
 ### qui initie la connexion ?? 
-- ds l e modele client | serveur tjr le client qui initie la connexion , le serveur reste écouter sur un port 
+- ds le modele client | serveur tjr le client qui initie la connexion , le serveur reste écouter sur un port 
     lorsque le service demande a OS creer un socket  et fait bind() + listen() le socket est cree en memoire + relie a IP + PORT + Service => Etat Listen cad pret a accepter des connexions mais aucun connexion n'existe encore juste le serveur ecoute 
 
     * Pourquoi .??? :
@@ -142,7 +142,7 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
 ### Relation 1 <-> 1 (SERVEUR <=> CLIENT)
 - Le Serveur communiquer avec un seul client a la fois une fois connecte , le serveur est occupe avec ce client il ne peut pas accepter d'autre connexions
 
-### Relation 1 <-> 1> (SERVEUR <=> CLIENTs)
+### Relation 1 <-> 1 > (SERVEUR <=> CLIENTs)
 - Un serveur peut accepter plusieurs clients en meme temps 
 - Chaque client a sa connexion independante avec le serveur 
 - Le serveur utilise des threads, socket dedies pour chaque client 
@@ -159,72 +159,7 @@ ON a le lancement d'un service (ex ; serveur web ) , ce service va demander au O
                                 service/programme
                                 état = ESTABLISHED
                             }
-        - On va parle sur les THREADS 
 ### Pourquoi le serveur ne sait rien d'avance des clients
     les clients peuvent etre dynamique et nombreux  et ne peut pas savoir leur IP (IP dynamique )et leurs ports.
     Si le serveur devait connaitre tous les client a l'avance 
         -IL doit pre-alloue une connexion en memoire chaque client a son socket interne  +> des que le serveur demarrer il aurait tous ces sockets deja ouverts et prete de recevoir => c'est impossible 
-
-## TCP (Transmission Control Protocol):
-    -TCP est un protocole de transfert entre 2 processus, est un protocole oriente connexion.
-        RQ: 
-            Un processus est une instance active d’un programme, créée et gérée par le système d’exploitation, avec sa propre mémoire et ses ressources.
-    -segmenter des données en paquets
-    - numerotation des segments pour garder l'ordre
-    - retransmission en cas de perte 
-
-    write(clientfd(file descriptor), "hello world", 11)
-        -copie ces octets ds buffer de sortie
-        -segmentation 
-        -L'entete TCP 
-            chaque segment devient => [En-tête TCP | Données]
-            contient :
-                Source port + destination port + numero d séquence + NUmero d'ACK + Flags ...
-        -Passage a IP layer
-            Ip encapsule le segement ds un paquet IP
-            .
-            .
-            .
-            ...
-   ### Comment La creation d'une Connexion  TCP?...
-#### 3-WAY HANDSHAKE  SYN(CLIENT) => SYN + ACK(SERVEUR) => ACK(CLIENT) 
-    1- Service démarre
-
-    2- Le client veut envoyer au serveur
-         - kernel creer un struct socket client + struct sock + struct tcp_sock + FD associe au socket + TCP closed  + Client appelle connect(fd, &addr_serveur, sizeof(addr_serveur)); + si le client ne fait pas bind afin de lier un port a ce socket  il choisi un port libre  => Initialisation d'un TCP (closed => SYN_SENT) => envoie d'un paquet SYN => KERNEL client attend SYN+ACK
-        ex: navigateur
-
-        le navigateur  dit a L'OS  je veux envoyer des donnees  a Ip sur le port 80 en TCP
-        -Os choisit un port local libre
-        -Creation d'un socket client 
-        -Prepare un packet TCP => SYN SYNchronize(demande de connexion)
-        -Envoie ce paquets via IP
-    
-    3- le serveur Recoit cette demande 
-        -OS regarde le port et IP de destination => trouve le socket en etat listen 
-        -OS creer un nv socket (IP+Port +IP et PORT du client)=> Mode RECEIVED  SYN+ACK(ACKnowledge) Recu de la demande 
-
-    4-Client confirme 
-        -client recoit le SYN+ACK
-        -OS client socket => MOde ESTABLISHED
-        -envoie ACK
-ESTABLISHED
-    5-Recoit du ACK
-        -OS serveur socket => MOde ESTABLISHED
-        -Connexion TCP existe 
-
-C/C:
-    une connexion TCP est ouverte, chaque côté (client et serveur) possède un socket TCP qui contient 
-        Socket TCP =
-            {
-            IP locale,
-            Port local,
-            IP distante,
-            Port distant,
-            État = ESTABLISHED
-            }
-
-    RQ :
-        le socket LISTEN ne peut jamais read ou write  => IL SERT D 'ACCEPTER JUSTE LES NV CONNEXIONS => ETAT LISTEN
-
-        NV SOCKET CLIENT => ETAT TCP : ESTABLISHED => READ AND WRITE 

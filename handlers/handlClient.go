@@ -7,12 +7,6 @@ import (
 	"time"
 )
 
-type Clients struct {
-	Enlinge  bool
-	Name     string
-	Messages []string
-}
-
 func HandlClient(con net.Conn) {
 	// DATE // HEURE
 	now := time.Now()
@@ -35,15 +29,14 @@ func HandlClient(con net.Conn) {
 
 	name := string(buf[:n-1])
 
-	clients := []Clients{}
-	clients = append(clients, Clients{Enlinge: true, Name: name})
-
 	ligne := form + "[" + name + "]:"
 
+	Historiques := []string{}
 
 	for string(buf[:n]) != "\n" {
 		con.Write([]byte(ligne))
 		con.Read(buf)
-
+		Historiques = append(Historiques, ligne+string(buf[:n]))
+		fmt.Println(Historiques)
 	}
 }

@@ -31,14 +31,18 @@ func main(){
 	fmt.Println("Listening on the port :"+port)
 
 
+	count := 0
 	for {
 		con, err := l.Accept()
+		count++
 		
 		if err != nil {
 			continue
 		}
 		go handlers.HandlClient(con)
+		go fmt.Println(count)
 
 	}
+
 
 }

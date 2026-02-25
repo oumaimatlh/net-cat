@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
+var (
+	historiques []string
+	mu          sync.Mutex
+)
+var clients = make(map[string]net.Conn)
 func HandlClient(con net.Conn) {
-	// DATE // HEURE
-	now := time.Now()
-	form := now.Format("[2006-01-02 15:04:05]")
+
 
 	welcome, err := os.ReadFile("welcome.txt")
 	if err != nil {
@@ -28,15 +32,34 @@ func HandlClient(con net.Conn) {
 	}
 
 	name := string(buf[:n-1])
+	clients[name]=con
 
-	ligne := form + "[" + name + "]:"
+	for{
 
-	Historiques := []string{}
+		now := time.Now()
+		form := now.Format("[2006-01-02 15:04:05]")
+		ligne := form + "[" + name + "]:"
 
-	for string(buf[:n]) != "\n" {
 		con.Write([]byte(ligne))
-		con.Read(buf)
-		Historiques = append(Historiques, ligne+string(buf[:n]))
-		fmt.Println(Historiques)
+
+		buff := make([]byte, 1024)
+		nn, _ := con.Read(buff)
+
+		message := ligne + string(buff[:nn])
+
+		mu.Lock()
+		historiques = append(historiques, message)
+		mu.Unlock()
+
+		for n, c := range clients {
+			if c != con {
+				c.Write([]byte("\n" + message + "\n" + form + "[" + n + "]:"))
+			}
+		}
+
+
+		//fmt.Println(historiques)
+		//fmt.Println("---------------------------------")
+
 	}
 }

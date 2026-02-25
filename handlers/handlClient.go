@@ -13,8 +13,8 @@ var (
 	mu          sync.Mutex
 )
 var clients = make(map[string]net.Conn)
-func HandlClient(con net.Conn) {
 
+func HandlClient(con net.Conn) {
 
 	welcome, err := os.ReadFile("welcome.txt")
 	if err != nil {
@@ -32,9 +32,9 @@ func HandlClient(con net.Conn) {
 	}
 
 	name := string(buf[:n-1])
-	clients[name]=con
+	clients[name] = con
 
-	for{
+	for {
 
 		now := time.Now()
 		form := now.Format("[2006-01-02 15:04:05]")
@@ -57,9 +57,9 @@ func HandlClient(con net.Conn) {
 			}
 		}
 
-
 		//fmt.Println(historiques)
 		//fmt.Println("---------------------------------")
 
 	}
+
 }

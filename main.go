@@ -1,13 +1,14 @@
 package main
 
 import (
-	"TEST/handlers"
 	"fmt"
 	"net"
 	"os"
 )
 
 
+
+var Count int
 
 func main(){
 	
@@ -31,16 +32,23 @@ func main(){
 	fmt.Println("Listening on the port :"+port)
 
 
-	count := 0
 	for {
-		con, err := l.Accept()
-		count++
-		
+		con, err := l.Accept()		
 		if err != nil {
 			continue
 		}
-		go handlers.HandlClient(con)
-		go fmt.Println(count)
+
+		if Count < 10 {
+			go HandlClient(con, Count)
+			Count++
+
+		}else {
+			con.Write([]byte("Sorry, we have 10 clients connexions in this room"))
+			con.Close()
+		}
+
+
+		go fmt.Println(Count)
 
 	}
 

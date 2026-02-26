@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -12,42 +13,58 @@ var (
 	clients     = make(map[string]net.Conn)
 	historiques []string
 	mu          sync.Mutex
+	form        string
 )
 
+func HandlClient(con net.Conn) {
+	defer con.Close()
 
-func HandlClient(con net.Conn, nbrClient int) {
+	buf := bufio.NewReader(con)
+
 	welcome, err := os.ReadFile("welcome.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
 	con.Write(welcome)
 
-	buf := make([]byte, 1024)
-	n, _ := con.Read(buf)
+	nameInput, _ := buf.ReadString('\n')
 
-	for string(buf[:n]) == "\n" {
-		con.Write([]byte("[ENTER YOUR NAME]:"))
-		n, _ = con.Read(buf)
-		close := con.SetDeadline(time.Now().Add(2 * time.Second))
-		if close != nil {
-			con.Close()
-			return
+	for {
+		nameInput, _ = buf.ReadString('\n')
+
+		if len(nameInput) == 0 {
+			con.Write([]byte("[ENTER YOUR NAME]:"))
+			continue
 		}
 
-		
+		for _, r := range nameInput {
+			if r < 32 || r > 126 {
+				con.Write([]byte("[ENTER YOUR NAME]:"))
+				continue
+			}
+		}
+		mu.Lock()
+		_, exists := clients[nameInput]
+		mu.Unlock()
+		if exists {
+			con.Write([]byte("[NAME ALREADY EXISTS]\n"))
+			con.Write([]byte("[ENTER YOUR NAME]:"))
+
+			continue
+		}
+
+		break
 	}
 
-	name := string(buf[:n-1])
+	name := nameInput[:len(nameInput)-1]
+	mu.Lock()
 	clients[name] = con
+	mu.Unlock()
 
 	now := time.Now()
-	form := now.Format("[2006-01-02 15:04:05]")
+	form = now.Format("[2006-01-02 15:04:05]")
 
-	for n, c := range clients {
-		if c != con {
-			c.Write([]byte("\n" + name + " has joined our chat\n" + form + "[" + n + "]:"))
-		}
-	}
+	BroadCast(con, name+" has joined our chat\n")
 
 	for _, history := range historiques {
 		for _, c := range clients {
@@ -58,40 +75,41 @@ func HandlClient(con net.Conn, nbrClient int) {
 	}
 
 	for {
-
 		ligne := form + "[" + name + "]:"
-
 		con.Write([]byte(ligne))
 
-		buff := make([]byte, 1024)
-		nn, err := con.Read(buff)
-
+		messageContent, err := buf.ReadString('\n')
 		if err != nil {
-			for n, c := range clients {
-				if c != con {
-					c.Write([]byte("\n" + name + " has left our chat...\n" + form + "[" + n + "]:"))
-				}
-			}
+			BroadCast(con, name+" has left our chat...\n")
+			mu.Lock()
 			Count--
-			
-			break
-
+			mu.Unlock()
+			return
 		}
 
-		message := ligne + string(buff[:nn])
-
+		found := false
+		for _, r := range messageContent {
+			if (r < 32 || r > 126) && r != '\n' {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+		message := ligne + messageContent
 		mu.Lock()
 		historiques = append(historiques, message)
 		mu.Unlock()
 
-		for n, c := range clients {
-			if c != con {
-				c.Write([]byte("\n" + message + form + "[" + n + "]:"))
-			}
-		}
-
+		BroadCast(con, message)
 	}
-
 }
 
-
+func BroadCast(con net.Conn, msg string) {
+	for n, c := range clients {
+		if c != con {
+			c.Write([]byte("\n" + msg + form + "[" + n + "]:"))
+		}
+	}
+}

@@ -6,51 +6,44 @@ import (
 	"os"
 )
 
-
-
 var Count int
 
-func main(){
-	
-	args:= os.Args
-	if !(len(args) == 1 || len(args) == 2){
+func main() {
+	args := os.Args
+	if !(len(args) == 1 || len(args) == 2) {
 		fmt.Println("[USAGE]: ./TCPChat $port")
-		return 
+		return
 	}
 	port := "8989"
 
-	if len(args) != 1  {
+	if len(args) != 1 {
 		port = args[1]
 	}
 
-
-	l, err:= net.Listen("tcp", ":"+port)
+	l, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		fmt.Println(err)
-		return 
+		return
 	}
-	fmt.Println("Listening on the port :"+port)
-
+	fmt.Println("Listening on the port :" + port)
 
 	for {
-		con, err := l.Accept()		
+		con, err := l.Accept()
 		if err != nil {
 			continue
 		}
 
+		mu.Lock()
 		if Count < 10 {
-			go HandlClient(con, Count)
+			go HandlClient(con)
 			Count++
+			mu.Unlock()
+		} else {
+			mu.Unlock()
 
-		}else {
 			con.Write([]byte("Sorry, we have 10 clients connexions in this room"))
 			con.Close()
+
 		}
-
-
-		go fmt.Println(Count)
-
 	}
-
-
 }

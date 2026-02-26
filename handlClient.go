@@ -14,8 +14,8 @@ var (
 	mu          sync.Mutex
 )
 
-func HandlClient(con net.Conn, nbrClient int) {
 
+func HandlClient(con net.Conn, nbrClient int) {
 	welcome, err := os.ReadFile("welcome.txt")
 	if err != nil {
 		fmt.Println(err)
@@ -28,7 +28,13 @@ func HandlClient(con net.Conn, nbrClient int) {
 	for string(buf[:n]) == "\n" {
 		con.Write([]byte("[ENTER YOUR NAME]:"))
 		n, _ = con.Read(buf)
-		con.SetDeadline(time.Now().Add(2 * time.Second))
+		close := con.SetDeadline(time.Now().Add(2 * time.Second))
+		if close != nil {
+			con.Close()
+			return
+		}
+
+		
 	}
 
 	name := string(buf[:n-1])
@@ -87,3 +93,5 @@ func HandlClient(con net.Conn, nbrClient int) {
 	}
 
 }
+
+

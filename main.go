@@ -40,7 +40,6 @@ func main() {
 			mu.Unlock()
 		} else {
 			mu.Unlock()
-
 			con.Write([]byte("Sorry, we have 10 clients connexions in this room"))
 			con.Close()
 

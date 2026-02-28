@@ -9,6 +9,7 @@ import (
 var Count int
 
 func main() {
+
 	args := os.Args
 	if !(len(args) == 1 || len(args) == 2) {
 		fmt.Println("[USAGE]: ./TCPChat $port")
@@ -18,6 +19,10 @@ func main() {
 
 	if len(args) != 1 {
 		port = args[1]
+		if port == "0"{
+			fmt.Println("Invalid Port")
+			return 
+		}
 	}
 
 	l, err := net.Listen("tcp", ":"+port)
@@ -25,6 +30,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	defer l.Close()
 	fmt.Println("Listening on the port :" + port)
 
 	for {
